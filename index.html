@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groq API Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <h2>Groq API Chat</h2>
+    <textarea id="userMessage" placeholder="Type your message..." rows="4" cols="50"></textarea>
+    <button onclick="sendMessage()">Send</button>
+    <div id="response" style="border: 1px solid #ccc; padding: 10px; margin-top: 10px;"></div>
+
+    <script>
+        async function sendMessage() {
+            const userMessage = document.getElementById("userMessage").value;
+            const responseElement = document.getElementById("response");
+            responseElement.innerHTML = "Loading...";
+
+            try {
+                const response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: userMessage })
+                });
+
+                const data = await response.json();
+                if (data.response) {
+                    responseElement.innerHTML = marked.parse(data.response);
+                } else {
+                    responseElement.innerHTML = "No response from API.";
+                }
+            } catch (error) {
+                responseElement.innerHTML = "Error: " + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
