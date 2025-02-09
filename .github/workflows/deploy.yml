@@ -1,0 +1,75 @@
+name: Serve Groq AI Chatbot
+
+on:  
+  push:  
+    branches:
+      - main
+  workflow_dispatch:  
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install express cors node-fetch@2
+
+      - name: Create backend server
+        run: |
+          cat <<EOT >> server.js
+          const express = require('express');
+          const cors = require('cors');
+          const fetch = require('node-fetch');
+
+          const app = express();
+          app.use(cors());
+          app.use(express.json());
+
+          app.post('/api/chat', async (req, res) => {
+              const userMessage = req.body.message;
+              const apiKey = process.env.GROQ_API_KEY;
+              const apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+
+              const requestBody = {
+                  messages: [{ role: "user", content: userMessage }],
+                  model: "deepseek-r1-distill-llama-70b",
+                  temperature: 0.6,
+                  max_tokens: 4096,
+                  top_p: 0.95,
+                  stream: false
+              };
+
+              try {
+                  const response = await fetch(apiUrl, {
+                      method: "POST",
+                      headers: {
+                          "Content-Type": "application/json",
+                          "Authorization": \`Bearer \${apiKey}\`
+                      },
+                      body: JSON.stringify(requestBody)
+                  });
+
+                  const data = await response.json();
+                  res.json({ response: data.choices[0].message.content });
+              } catch (error) {
+                  res.status(500).json({ error: error.message });
+              }
+          });
+
+          app.listen(3000, () => console.log("Server running on port 3000"));
+          EOT
+
+      - name: Run Server
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: node server.js
